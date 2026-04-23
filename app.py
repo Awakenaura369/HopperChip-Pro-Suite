@@ -3,115 +3,116 @@ from groq import Groq
 import feedparser
 from bs4 import BeautifulSoup
 
-# إعداد الصفحة وتصميمها
-st.set_page_config(page_title="HopperChip Auto-Pilot v2.1", page_icon="⚡", layout="wide")
+# --- إعدادات الصفحة ---
+st.set_page_config(page_title="HopperChip Auto-Pilot v2.2", page_icon="⚡", layout="wide")
 
-# ستايل CSS خفيف باش تبان الواجهة احترافية
+# --- ستايل الواجهة ---
 st.markdown("""
     <style>
-    .main { background-color: #f5f7f9; }
-    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #007bff; color: white; }
-    .stCodeBlock { border: 1px solid #e0e0e0; }
+    .main { background-color: #f8f9fa; }
+    .stTabs [data-baseweb="tab-list"] { gap: 24px; }
+    .stTabs [data-baseweb="tab"] { height: 50px; white-space: pre-wrap; background-color: #eee; border-radius: 5px; }
+    .stTabs [aria-selected="true"] { background-color: #007bff !important; color: white !important; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🚀 HopperChip Auto-Pilot Engine")
-st.subheader("أتمتة المحتوى التقني باستخدام الـ AI والأخبار المباشرة")
+st.title("🚀 HopperChip Content Machine")
+st.caption("نظام أتمتة المقالات التقنية لمدونة HopperChip.com")
 
-# القائمة الجانبية للإعدادات
+# --- القائمة الجانبية (Sidebar) ---
 with st.sidebar:
-    st.header("⚙️ الإعدادات والتحكم")
-    api_key = st.text_input("Enter Groq API Key:", type="password")
+    st.header("🛠️ التحكم والأمان")
+    api_key = st.text_input("Enter Groq API Key:", type="password", help="حط هنا الـ API Key ديالك من Groq Cloud")
     
-    # تحديث قائمة الموديلات لآخر إصدارات 2026
-    model_choice = st.selectbox("Select Model:", [
-        "llama-3.3-70b-specdec", 
+    # قائمة الموديلات المستقرة حالياً في 2026
+    model_choice = st.selectbox("اختر الموديل:", [
+        "llama-3.3-70b-versatile", 
+        "llama-3.1-70b-versatile",
         "llama-3.1-8b-instant",
         "mixtral-8x7b-32768"
-    ])
+    ], index=0)
     
     language = st.selectbox("لغة المقال:", ["Arabic", "English", "French"])
     
     st.markdown("---")
-    st.header("🌐 مصادر الأخبار")
+    st.header("📡 مصادر الأخبار")
     RSS_SOURCES = {
-        "TechCrunch (Hardware)": "https://techcrunch.com/category/hardware/feed/",
+        "TechCrunch Hardware": "https://techcrunch.com/category/hardware/feed/",
         "The Verge": "https://www.theverge.com/rss/index.xml",
-        "Ars Technica": "https://feeds.arstechnica.com/arstechnica/index",
-        "Engadget": "https://www.engadget.com/rss.xml"
+        "Engadget": "https://www.engadget.com/rss.xml",
+        "Ars Technica": "https://feeds.arstechnica.com/arstechnica/index"
     }
-    source_choice = st.selectbox("اختر مصدر الخبر:", list(RSS_SOURCES.keys()))
-    num_posts = st.slider("عدد المقالات لمعالجتها:", 1, 5, 3)
+    source_choice = st.selectbox("المصدر:", list(RSS_SOURCES.keys()))
+    num_posts = st.slider("عدد المقالات:", 1, 5, 2)
 
-# المحرك الرئيسي
+# --- المحرك الرئيسي ---
 if api_key:
-    client = Groq(api_key=api_key)
-    
-    if st.button("🔄 إبدأ جلب الأخبار وإعادة الصياغة"):
-        with st.spinner('جاري الاتصال بالمصادر وتحليل البيانات...'):
-            try:
-                # 1. جلب البيانات من RSS
+    try:
+        client = Groq(api_key=api_key)
+        
+        if st.button("🔄 جلب الأخبار وصناعة المقالات"):
+            with st.spinner('جاري معالجة البيانات...'):
                 feed = feedparser.parse(RSS_SOURCES[source_choice])
                 
                 if not feed.entries:
-                    st.error("لم نتمكن من جلب الأخبار من هذا المصدر حالياً.")
+                    st.error("المصدر مارد تا شي خبر، جرب مصدر آخر.")
                 else:
                     for entry in feed.entries[:num_posts]:
-                        st.markdown(f"### 📰 الخبر الأصلي: {entry.title}")
-                        
-                        # تنظيف النص
-                        content_raw = entry.summary if 'summary' in entry else entry.description
-                        soup = BeautifulSoup(content_raw, "html.parser")
-                        clean_text = soup.get_text()
+                        # تنظيف المحتوى الأصلي
+                        raw_html = entry.summary if 'summary' in entry else entry.description
+                        clean_text = BeautifulSoup(raw_html, "html.parser").get_text()
 
-                        # 2. إعداد الـ Prompt الاحترافي لـ SEO
+                        # الـ Prompt الاحترافي لـ SEO
                         prompt = f"""
-                        Task: Rewrite this technical news into a professional, SEO-friendly blog post for 'HopperChip.com'.
-                        Target Language: {language}.
-                        Output Format: HTML ONLY (use <h2>, <h3>, <p>, <ul>, <li>, <strong>).
+                        Rewrite this tech news into a professional SEO blog post for 'HopperChip.com'.
+                        Language: {language}.
+                        Format: PURE HTML (use <h2>, <h3>, <p>, <ul>, <li>, <strong>).
                         
                         Context:
                         Original Title: {entry.title}
                         Original Content: {clean_text}
                         
-                        Specific Instructions:
-                        - Create a new, unique SEO title that attracts clicks.
-                        - Break the content into logical sections with <h2> and <h3> headers.
-                        - Use professional tech terminology (Processors, Nano-tech, Architecture, etc.).
-                        - Include a 'Technical Verdict' section at the end.
-                        - Ensure the HTML is clean and ready for WordPress/Blogger.
-                        - DO NOT include any conversational text, ONLY the HTML code.
+                        Requirements:
+                        - Create a catchy SEO title.
+                        - Use <h2> and <h3> tags for sections.
+                        - Professional tech terminology only.
+                        - Include a 'Technical Verdict' at the end.
+                        - NO conversational text, output ONLY the HTML code.
                         """
 
-                        # 3. استدعاء الموديل الجديد
-                        completion = client.chat.completions.create(
-                            messages=[{"role": "user", "content": prompt}],
-                            model=model_choice,
-                            temperature=0.4 # درجة منخفضة لضمان الدقة التقنية
-                        )
-                        
-                        html_output = completion.choices[0].message.content
-
-                        # 4. عرض النتائج للمستخدم
-                        tab_view, tab_code = st.tabs(["👁️ معاينة المقال", "📄 كود HTML"])
-                        
-                        with tab_view:
-                            st.markdown(f"<div style='border: 1px solid #ddd; padding: 20px; border-radius: 10px; background: white;'>{html_output}</div>", unsafe_allow_html=True)
-                        
-                        with tab_code:
-                            st.code(html_output, language="html")
-                            st.download_button(
-                                label="Download HTML File",
-                                data=html_output,
-                                file_name=f"hopperchip_{entry.title[:15]}.html",
-                                mime="text/html"
+                        try:
+                            # استدعاء الموديل
+                            completion = client.chat.completions.create(
+                                messages=[{"role": "user", "content": prompt}],
+                                model=model_choice,
+                                temperature=0.5
                             )
-                        st.markdown("---")
-                        
-            except Exception as e:
-                st.error(f"خطأ تقني: {e}")
+                            
+                            html_output = completion.choices[0].message.content
+
+                            # عرض النتائج
+                            st.markdown(f"### ✅ تم التوليد: {entry.title}")
+                            t1, t2 = st.tabs(["👁️ المعاينة", "📄 الكود"])
+                            
+                            with t1:
+                                st.markdown(f"<div style='background:white; padding:15px; border:1px solid #ddd;'>{html_output}</div>", unsafe_allow_html=True)
+                            
+                            with t2:
+                                st.code(html_output, language="html")
+                                st.download_button(f"Download HTML ({entry.title[:10]})", html_output, file_name=f"post_{entry.title[:10]}.html")
+                            
+                            st.markdown("---")
+
+                        except Exception as model_err:
+                            if "decommissioned" in str(model_err):
+                                st.error(f"❌ الموديل '{model_choice}' مابقاش خدام. جرب تختار 'llama-3.1-8b-instant' من الجنب.")
+                            else:
+                                st.error(f"❌ خطأ في الموديل: {model_err}")
+
+    except Exception as e:
+        st.error(f"❌ خطأ عام: {e}")
 else:
-    st.info("👈 يرجى إدخال Groq API Key في القائمة الجانبية لتفعيل الماكينة.")
+    st.info("👈 حط الـ API Key ديالك في القائمة الجانبية باش تبدا الأتمتة.")
 
 st.sidebar.markdown("---")
-st.sidebar.caption("HopperChip Pro Suite v2.1 | Built with ❤️ for Automation")
+st.sidebar.caption("HopperChip Pro Suite v2.2 | Built for Automation")
