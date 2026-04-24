@@ -289,9 +289,7 @@ with st.sidebar:
     language = st.selectbox("Article Language:", ["English", "Arabic"])
 
     st.markdown("---")
-    st.markdown("### 📡 Content Source")
-
-    content_mode = st.radio("Source Mode:", ["📰 RSS Feed", "✏️ Custom Topic"])
+    st.markdown("### 📡 Live Sources")
 
     RSS_SOURCES = {
         "Hardware News": "https://techcrunch.com/category/hardware/feed/",
@@ -300,18 +298,8 @@ with st.sidebar:
         "Wired Gear": "https://www.wired.com/feed/category/gear/latest/rss"
     }
 
-    if content_mode == "📰 RSS Feed":
-        source_choice = st.selectbox("News Source:", list(RSS_SOURCES.keys()))
-        num_posts = st.slider("Number of articles:", 1, 3, 1)
-        custom_topic = None
-    else:
-        custom_topic = st.text_area(
-            "Your Topic:",
-            placeholder="e.g. TSMC 2nm chip process: everything you need to know",
-            height=100
-        )
-        num_posts = 1
-        source_choice = None
+    source_choice = st.selectbox("News Source:", list(RSS_SOURCES.keys()))
+    num_posts = st.slider("Number of articles:", 1, 3, 1)
 
     st.markdown("---")
 
@@ -394,22 +382,15 @@ if api_key:
     if st.button("🚀 Generate High-Authority Blogger Posts"):
         entries_to_process = []
 
-        if content_mode == "✏️ Custom Topic":
-            if not custom_topic or len(custom_topic.strip()) < 10:
-                st.warning("Please enter a topic (at least 10 characters).")
+        with st.spinner("📡 Fetching RSS feed..."):
+            feed = feedparser.parse(RSS_SOURCES[source_choice])
+            if not feed.entries:
+                st.error("Could not fetch news. Try another source.")
                 st.stop()
-            # Fake entry from custom topic
-            entries_to_process = [{"title": custom_topic.strip(), "clean_text": custom_topic.strip()}]
-        else:
-            with st.spinner("📡 Fetching RSS feed..."):
-                feed = feedparser.parse(RSS_SOURCES[source_choice])
-                if not feed.entries:
-                    st.error("Could not fetch news. Try another source.")
-                    st.stop()
-                for entry in feed.entries[:num_posts]:
-                    content_raw = entry.get("summary", entry.get("description", ""))
-                    clean_text = BeautifulSoup(content_raw, "html.parser").get_text()
-                    entries_to_process.append({"title": entry.title, "clean_text": clean_text})
+            for entry in feed.entries[:num_posts]:
+                content_raw = entry.get("summary", entry.get("description", ""))
+                clean_text = BeautifulSoup(content_raw, "html.parser").get_text()
+                entries_to_process.append({"title": entry.title, "clean_text": clean_text})
 
         for item in entries_to_process:
             title = item["title"]
